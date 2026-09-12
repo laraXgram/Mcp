@@ -1,0 +1,105 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Mcp\Server;
+
+use LaraGram\Support\Str;
+use LaraGram\Mcp\Server\Annotations\Annotation;
+use LaraGram\Mcp\Server\Attributes\Cacheable;
+use LaraGram\Mcp\Server\Attributes\MimeType;
+use LaraGram\Mcp\Server\Attributes\Uri;
+use LaraGram\Mcp\Server\Concerns\HasAnnotations;
+use LaraGram\Mcp\Server\Contracts\HasUriTemplate;
+
+abstract class Resource extends Primitive
+{
+    use HasAnnotations;
+
+    protected string $uri = '';
+
+    protected string $mimeType = '';
+
+    protected string $defaultUriScheme = 'file';
+
+    public function uri(): string
+    {
+        if ($this instanceof HasUriTemplate) {
+            return (string) $this->uriTemplate();
+        }
+
+        $attribute = $this->resolveAttribute(Uri::class);
+
+        return $attribute !== null
+            ? $attribute->value
+            : ($this->uri !== '' ? $this->uri : $this->defaultUriScheme.'://resources/'.Str::kebab(class_basename($this)));
+    }
+
+    public function cacheable(): ?Cacheable
+    {
+        return $this->resolveAttribute(Cacheable::class);
+    }
+
+    public function mimeType(): string
+    {
+        $attribute = $this->resolveAttribute(MimeType::class);
+
+        return $attribute !== null
+            ? $attribute->value
+            : ($this->mimeType !== '' ? $this->mimeType : 'text/plain');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toMethodCall(): array
+    {
+        return ['uri' => $this->uri()];
+    }
+
+    /**
+     * @return array{
+     *     name: string,
+     *     title: string,
+     *     description: string,
+     *     uri?: string,
+     *     uriTemplate?: string,
+     *     mimeType: string,
+     *     _meta?: array<string, mixed>
+     * }
+     */
+    public function toArray(): array
+    {
+        $annotations = $this->annotations();
+
+        $data = [
+            'name' => $this->name(),
+            'title' => $this->title(),
+            'description' => $this->description(),
+            'mimeType' => $this->mimeType(),
+        ];
+
+        if ($annotations !== []) {
+            $data['annotations'] = $annotations;
+        }
+
+        if ($this instanceof HasUriTemplate) {
+            $data['uriTemplate'] = (string) $this->uriTemplate();
+        } else {
+            $data['uri'] = $this->uri();
+        }
+
+        // @phpstan-ignore return.type
+        return $this->mergeMeta($this->mergeIcons($data));
+    }
+
+    /**
+     * @return array<int, class-string>
+     */
+    protected function allowedAnnotations(): array
+    {
+        return [
+            Annotation::class,
+        ];
+    }
+}

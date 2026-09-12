@@ -1,0 +1,145 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Mcp\Server;
+
+use LaraGram\Contracts\Http\Kernel as HttpKernelContract;
+use LaraGram\Foundation\Http\Kernel as HttpKernel;
+use LaraGram\Support\Facades\Route;
+use LaraGram\Support\ServiceProvider;
+use LaraGram\Mcp\Client\ClientManager;
+use LaraGram\Mcp\Console\Commands\InspectorCommand;
+use LaraGram\Mcp\Console\Commands\MakeAppResourceCommand;
+use LaraGram\Mcp\Console\Commands\MakePromptCommand;
+use LaraGram\Mcp\Console\Commands\MakeResourceCommand;
+use LaraGram\Mcp\Console\Commands\MakeServerCommand;
+use LaraGram\Mcp\Console\Commands\MakeToolCommand;
+use LaraGram\Mcp\Console\Commands\StartCommand;
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Server\Middleware\AddWwwAuthenticateHeader;
+
+class McpServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(Registrar::class, fn (): Registrar => new Registrar);
+
+        $this->app->singleton(ClientManager::class, fn (): ClientManager => new ClientManager);
+
+        $this->app->singleton('mcp.sdk', fn (): string => (string) file_get_contents(__DIR__.'/../../resources/js/mcp-sdk.min.js'));
+
+        $this->mergeConfigFrom(__DIR__.'/../../config/mcp.php', 'mcp');
+    }
+
+    public function boot(): void
+    {
+        $this->registerMcpScope();
+        $this->registerGlobalMiddleware();
+        $this->registerRoutes();
+        $this->registerContainerCallbacks();
+        $this->registerClientDisconnect();
+        $this->registerViews();
+
+        if ($this->app->runningInConsole()) {
+            $this->registerCommands();
+            $this->registerPublishing();
+        }
+    }
+
+    protected function registerGlobalMiddleware(): void
+    {
+        $this->callAfterResolving(HttpKernelContract::class, function (mixed $kernel): void {
+            if ($kernel instanceof HttpKernel) {
+                $kernel->pushMiddleware(AddWwwAuthenticateHeader::class);
+            }
+        });
+    }
+
+    protected function registerPublishing(): void
+    {
+        $this->publishes([
+            __DIR__.'/../../routes/ai.php' => base_path('routes/ai.php'),
+        ], 'ai-routes');
+
+        $this->publishes([
+            __DIR__.'/../../resources/views/mcp/authorize.blade.php' => resource_path('views/mcp/authorize.blade.php'),
+            __DIR__.'/../../resources/views/mcp/components/app.blade.php' => resource_path('views/vendor/mcp/components/app.blade.php'),
+        ], 'mcp-views');
+
+        $this->publishes([
+            __DIR__.'/../../stubs/mcp-prompt.stub' => base_path('stubs/mcp-prompt.stub'),
+            __DIR__.'/../../stubs/mcp-resource.stub' => base_path('stubs/mcp-resource.stub'),
+            __DIR__.'/../../stubs/mcp-server.stub' => base_path('stubs/mcp-server.stub'),
+            __DIR__.'/../../stubs/mcp-tool.stub' => base_path('stubs/mcp-tool.stub'),
+            __DIR__.'/../../stubs/mcp-app-resource.stub' => base_path('stubs/mcp-app-resource.stub'),
+            __DIR__.'/../../stubs/mcp-app-resource.view.stub' => base_path('stubs/mcp-app-resource.view.stub'),
+        ], 'mcp-stubs');
+
+        $this->publishes([
+            __DIR__.'/../../config/mcp.php' => config_path('mcp.php'),
+        ], 'mcp-config');
+    }
+
+    protected function registerRoutes(): void
+    {
+        $path = base_path('routes/ai.php');
+
+        if (! file_exists($path)) {
+            return;
+        }
+
+        if (! $this->app->runningInConsole() && $this->app->routesAreCached()) {
+            return;
+        }
+
+        Route::group([], $path);
+    }
+
+    protected function registerContainerCallbacks(): void
+    {
+        $this->app->resolving(Request::class, function (Request $request, $app): void {
+            if ($app->bound('mcp.request')) {
+                /** @var Request $currentRequest */
+                $currentRequest = $app->make('mcp.request');
+
+                $request->setArguments($currentRequest->all());
+                $request->setMeta($currentRequest->meta());
+            }
+        });
+    }
+
+    protected function registerClientDisconnect(): void
+    {
+        $this->app->terminating(function (): void {
+            if ($this->app->resolved(ClientManager::class)) {
+                $this->app->make(ClientManager::class)->disconnectAll();
+            }
+        });
+    }
+
+    protected function registerCommands(): void
+    {
+        $this->commands([
+            StartCommand::class,
+            MakeServerCommand::class,
+            MakeToolCommand::class,
+            MakePromptCommand::class,
+            MakeResourceCommand::class,
+            MakeAppResourceCommand::class,
+            InspectorCommand::class,
+        ]);
+    }
+
+    protected function registerViews(): void
+    {
+        $this->loadViewsFrom(__DIR__.'/../../resources/views/mcp', 'mcp');
+    }
+
+    protected function registerMcpScope(): void
+    {
+        $this->app->booted(function (): void {
+            Registrar::ensureMcpScope();
+        });
+    }
+}

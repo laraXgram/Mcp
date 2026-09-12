@@ -1,0 +1,204 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Mcp\Console\Commands;
+
+use Exception;
+use LaraGram\Console\Command;
+use LaraGram\Routing\Exceptions\UrlGenerationException;
+use LaraGram\Routing\Route;
+use LaraGram\Routing\UrlGenerator;
+use LaraGram\Support\Arr;
+use LaraGram\Mcp\Server\Registrar;
+use LaraGram\Console\Attribute\AsCommand;
+use LaraGram\Console\Input\InputArgument;
+use LaraGram\Console\Input\InputOption;
+use LaraGram\Console\Process\PhpExecutableFinder;
+use LaraGram\Console\Process\Process;
+
+#[AsCommand(
+    name: 'mcp:inspector',
+    description: 'Open the MCP Inspector tool to debug and test MCP Servers'
+)]
+class InspectorCommand extends Command
+{
+    public function handle(Registrar $registrar): int
+    {
+        $handle = $this->argument('handle');
+
+        if (! is_string($handle)) {
+            $this->components->error('Please pass a valid MCP server handle');
+
+            return static::FAILURE;
+        }
+
+        $this->components->info("Starting the MCP Inspector for server [{$handle}]");
+
+        $localServer = $registrar->getLocalServer($handle);
+        $route = $registrar->getWebServer($handle);
+
+        $servers = $registrar->servers();
+        if ($servers === []) {
+            $this->components->error('No MCP servers found. Please run `php artisan make:mcp-server [name]`');
+
+            return static::FAILURE;
+        }
+
+        // Only one server, we should just run it for them
+        if (count($servers) === 1) {
+            $server = array_shift($servers);
+            [$localServer, $route] = match (true) {
+                is_callable($server) => [$server, null],
+                $server::class === Route::class => [null, $server],
+                default => [null, null],
+            };
+        }
+
+        if (is_null($localServer) && is_null($route)) {
+            $availableServers = Arr::map(array_keys($servers), fn ($server): string => "[{$server}]");
+            $this->components->error('MCP Server with name ['.$handle.'] not found. Available servers: '.Arr::join($availableServers, ', '));
+
+            return static::FAILURE;
+        }
+
+        $env = [];
+
+        if (is_string($host = $this->option('host'))) {
+            $env['HOST'] = $host;
+        }
+
+        if (is_string($port = $this->option('port'))) {
+            $env['CLIENT_PORT'] = $port;
+        }
+
+        if ($localServer !== null) {
+            $artisanPath = base_path('artisan');
+
+            $serverConfig = [
+                'type' => 'stdio',
+                'command' => $this->phpBinary(),
+                'args' => [$artisanPath, 'mcp:start', $handle],
+            ];
+
+            $guidance = [
+                'Transport Type' => 'STDIO',
+                'Command' => $this->phpBinary(),
+                'Arguments' => implode(' ', [
+                    str_replace('\\', '/', $artisanPath),
+                    'mcp:start',
+                    $handle,
+                ]),
+            ];
+        } else {
+            try {
+                $serverUrl = $this->serverUrl($route);
+            } catch (UrlGenerationException) {
+                $this->components->error('Every route parameter needs a value to inspect this server');
+
+                return static::FAILURE;
+            }
+
+            if (parse_url($serverUrl, PHP_URL_SCHEME) === 'https') {
+                $env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
+            }
+
+            $serverConfig = [
+                'type' => 'http',
+                'url' => $serverUrl,
+            ];
+
+            $guidance = [
+                'Transport Type' => 'Streamable HTTP',
+                'URL' => $serverUrl,
+                'Secure' => 'Your project must be accessible on HTTP for this to work due to how node manages SSL trust',
+            ];
+        }
+
+        $serverConfig['protocolEra'] = 'modern';
+
+        $configPath = tempnam(sys_get_temp_dir(), 'mcp-inspector-');
+
+        if ($configPath === false) {
+            $this->components->error('Unable to write the MCP Inspector configuration file.');
+
+            return static::FAILURE;
+        }
+
+        file_put_contents($configPath, (string) json_encode([
+            'mcpServers' => [$handle => $serverConfig],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        $command = [
+            'npx',
+            '@modelcontextprotocol/inspector',
+            '--config',
+            $configPath,
+        ];
+
+        $guidance['Protocol Era'] = 'modern';
+        $guidance['Config'] = $configPath;
+
+        $process = new Process($command, null, $env);
+        $process->setTimeout(null);
+
+        try {
+            foreach ($guidance as $guidanceKey => $guidanceValue) {
+                $this->info(sprintf('%s => %s', $guidanceKey, $guidanceValue));
+            }
+
+            $this->newLine();
+
+            $process->mustRun(function (int|string $type, string $buffer): void {
+                echo $buffer;
+            });
+        } catch (Exception $exception) {
+            $this->components->error('Failed to start MCP Inspector: '.$exception->getMessage());
+
+            return static::FAILURE;
+        }
+
+        return static::SUCCESS;
+    }
+
+    /**
+     * @return array<int, array<int, string|int>>
+     */
+    protected function getArguments(): array
+    {
+        return [
+            ['handle', InputArgument::REQUIRED, 'The handle or route of the MCP server to inspect.'],
+        ];
+    }
+
+    /**
+     * @return array<int, array<int, string|int|null>>
+     */
+    protected function getOptions(): array
+    {
+        return [
+            ['host', null, InputOption::VALUE_OPTIONAL, 'The host the inspector should bind to'],
+            ['port', null, InputOption::VALUE_OPTIONAL, 'The port the inspector should bind to'],
+        ];
+    }
+
+    protected function serverUrl(Route $route): string
+    {
+        $parameters = [];
+
+        foreach ($route->parameterNames() as $parameter) {
+            $value = trim((string) $this->components->ask("What is the value for the [{$parameter}] route parameter?"));
+
+            if ($value !== '') {
+                $parameters[$parameter] = $value;
+            }
+        }
+
+        return $this->laragram->make(UrlGenerator::class)->toRoute($route, $parameters, true);
+    }
+
+    protected function phpBinary(): string
+    {
+        return (new PhpExecutableFinder)->find(false) ?: 'php';
+    }
+}

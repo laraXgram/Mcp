@@ -1,0 +1,22 @@
+<?php
+
+namespace {{ namespace }};
+
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Attributes\Description;
+use LaraGram\Mcp\Server\Resource;
+
+#[Description('A description of what this resource contains.')]
+class {{ class }} extends Resource
+{
+    /**
+     * Handle the resource request.
+     */
+    public function handle(Request $request): Response
+    {
+        //
+
+        return Response::text('The resource content.');
+    }
+}

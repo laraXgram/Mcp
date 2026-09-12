@@ -1,0 +1,34 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Mcp\Server\Middleware;
+
+use Closure;
+use LaraGram\Http\Request;
+use LaraGram\Http\BaseResponse as Response;
+
+class ReorderJsonAccept
+{
+    /**
+     * Handle an incoming request.
+     *
+     * @param  Closure(Request): (Response)  $next
+     */
+    public function handle(Request $request, Closure $next): Response
+    {
+        $accept = $request->header('Accept');
+        if (is_string($accept) && str_contains($accept, ',')) {
+            $accept = array_map(trim(...), explode(',', $accept));
+        }
+
+        if (! is_array($accept)) {
+            return $next($request);
+        }
+
+        usort($accept, fn ($a, $b): int => str_contains((string) $b, 'application/json') <=> str_contains((string) $a, 'application/json'));
+        $request->headers->set('Accept', implode(', ', $accept));
+
+        return $next($request);
+    }
+}

@@ -1,0 +1,44 @@
+{
+    "name": "laraxgram/mcp",
+    "description": "Rapidly build MCP servers for your LaraGram applications.",
+    "keywords": [
+        "mcp",
+        "laragram"
+    ],
+    "homepage": "https://github.com/laraxgram/mcp",
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/laraxgram/mcp/issues",
+        "source": "https://github.com/laraxgram/mcp"
+    },
+    "require": {
+        "php": "^8.2",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "laraxgram/core": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "LaraGram\\Mcp\\": "src/",
+            "LaraGram\\Mcp\\Server\\": "src/Server/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "LaraGram\\Mcp\\Server\\McpServiceProvider"
+            ],
+            "aliases": {
+                "Mcp": "LaraGram\\Mcp\\Facades\\Mcp"
+            }
+        }
+    },
+    "scripts": {
+        "minify": "npx terser resources/js/mcp-sdk.js --compress --mangle --output resources/js/mcp-sdk.min.js"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

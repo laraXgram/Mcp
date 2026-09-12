@@ -1,0 +1,6 @@
+.idea/
+/vendor
+/composer.lock
+/.junie
+.claude
+.DS_Store

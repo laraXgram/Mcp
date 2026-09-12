@@ -1,0 +1,24 @@
+<?php
+
+namespace {{ namespace }};
+
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Attributes\AppMeta;
+use LaraGram\Mcp\Server\Attributes\Description;
+use LaraGram\Mcp\Server\AppResource;
+
+#[Description('A description of what this app resource does.')]
+#[AppMeta]
+class {{ class }} extends AppResource
+{
+    /**
+     * Handle the app resource request.
+     */
+    public function handle(Request $request): Response
+    {
+        return Response::view('{{ view }}', [
+            'title' => $this->title(),
+        ]);
+    }
+}

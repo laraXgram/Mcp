@@ -1,0 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+namespace LaraGram\Mcp\Client\OAuth;
+
+use SensitiveParameter;
+
+class ClientRegistration
+{
+    public function __construct(
+        public string $clientId,
+        #[SensitiveParameter]
+        public ?string $clientSecret = null,
+    ) {}
+}
