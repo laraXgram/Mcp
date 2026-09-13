@@ -9,6 +9,7 @@ use LaraGram\Container\Container;
 use LaraGram\Contracts\Container\BindingResolutionException;
 use InvalidArgumentException;
 use LaraGram\Mcp\Enums\ErrorCode;
+use LaraGram\Mcp\Events\ResourceRead;
 use LaraGram\Mcp\Exceptions\JsonRpcException;
 use LaraGram\Mcp\Request;
 use LaraGram\Mcp\Response;
@@ -49,9 +50,31 @@ class ReadResource implements Method
 
         $response = $this->callHandler(fn (): mixed => $this->invokeResource($resource, $uri), $request);
 
-        return is_iterable($response)
-            ? $this->toJsonRpcStreamedResponse($request, $response, $this->serializable($resource, $uri))
-            : $this->toJsonRpcResponse($request, $response, $this->serializable($resource, $uri));
+        if (! is_iterable($response)) {
+            return tap(
+                $this->toJsonRpcResponse($request, $response, $this->serializable($resource, $uri)),
+                fn (JsonRpcResponse $response) => $this->dispatchRead($resource, $uri, $response),
+            );
+        }
+
+        return (function () use ($request, $response, $resource, $uri): Generator {
+            $last = null;
+
+            foreach ($this->toJsonRpcStreamedResponse($request, $response, $this->serializable($resource, $uri)) as $message) {
+                yield $last = $message;
+            }
+
+            $this->dispatchRead($resource, $uri, $last);
+        })();
+    }
+
+    protected function dispatchRead(Resource $resource, string $uri, ?JsonRpcResponse $response): void
+    {
+        $container = Container::getInstance();
+
+        if ($container->bound('events')) {
+            $container->make('events')->dispatch(new ResourceRead($resource, $uri, $response?->toArray()['result'] ?? null));
+        }
     }
 
     /**

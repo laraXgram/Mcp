@@ -16,7 +16,7 @@ class DynamicClientRegistration
         string $registrationEndpoint,
         string $redirectUri,
         ?string $scope = null,
-        string $clientName = 'Laravel MCP Client',
+        string $clientName = 'LaraGram MCP Client',
         string $applicationType = 'web',
         TokenEndpointAuthMethod $tokenEndpointAuthMethod = TokenEndpointAuthMethod::ClientSecretPost,
     ): ClientRegistration {

@@ -1,18 +1,18 @@
 ---
 name: mcp-development
-description: "Use this skill for Laravel MCP development. Trigger when creating or editing MCP tools, resources, prompts, servers, or UI apps in Laravel projects. Covers: artisan make:mcp-* generators, routes/ai.php, Tool/Resource/Prompt/AppResource classes, schema validation, shouldRegister(), OAuth setup, URI templates, read-only attributes, MCP debugging, MCP UI apps, the x-mcp::app Blade component, createMcpApp(), default AppResource handle() auto-infers view from class name, Response::view(), AppMeta/Csp/Permissions/appMeta() configuration, #[RendersApp] attribute, Library enum for CDN libraries (Tailwind, Alpine), and host theming via CSS variables. Use this whenever the user mentions MCP apps, MCP UI, interactive MCP resources, styling MCP apps with Tailwind or Alpine, or building visual interfaces for AI agents."
+description: "Use this skill for LaraGram MCP development. Trigger when creating or editing MCP tools, resources, prompts, servers, or UI apps in LaraGram projects. Covers: laragram make:mcp-* generators, routes/ai.php, Tool/Resource/Prompt/AppResource classes, schema validation, shouldRegister(), OAuth setup, URI templates, read-only attributes, MCP debugging, MCP UI apps, the x-mcp::app Blade component, createMcpApp(), default AppResource handle() auto-infers view from class name, Response::view(), AppMeta/Csp/Permissions/appMeta() configuration, #[RendersApp] attribute, Library enum for CDN libraries (Tailwind, Alpine), and host theming via CSS variables. Use this whenever the user mentions MCP apps, MCP UI, interactive MCP resources, styling MCP apps with Tailwind or Alpine, or building visual interfaces for AI agents."
 license: MIT
 metadata:
-  author: laravel
+  author: laragram
 ---
 @php
-/** @var \Laravel\Boost\Install\GuidelineAssist $assist */
+/** @var \LaraGram\Brain\Install\GuidelineAssist $assist */
 @endphp
 # MCP Development
 
 ## Documentation
 
-Use `search-docs` for detailed Laravel MCP patterns and documentation.
+Use `search-docs` for detailed LaraGram MCP patterns and documentation.
 
 For MCP UI apps (interactive HTML resources), read `references/app.md` — it covers the full architecture, host theming CSS variables, tool-to-UI linking patterns, library scripts (Tailwind, Alpine via `Library`), and real-world examples.
 
@@ -20,31 +20,31 @@ For MCP UI apps (interactive HTML resources), read `references/app.md` — it co
 
 Register MCP servers in `routes/ai.php`:
 
-@boostsnippet("Register MCP Server", "php")
-use Laravel\Mcp\Facades\Mcp;
+@brainsnippet("Register MCP Server", "php")
+use LaraGram\Mcp\Facades\Mcp;
 
 Mcp::web('/mcp/demo', \App\Mcp\Servers\AppServer::class);
-@endboostsnippet
+@endbrainsnippet
 
 ### Creating MCP Primitives
 
 ```bash
-{{ $assist->artisanCommand('make:mcp-tool ToolName') }}            # Create a tool
-{{ $assist->artisanCommand('make:mcp-resource ResourceName') }}     # Create a resource
-{{ $assist->artisanCommand('make:mcp-prompt PromptName') }}        # Create a prompt
-{{ $assist->artisanCommand('make:mcp-server ServerName') }}        # Create a server
-{{ $assist->artisanCommand('make:mcp-app-resource DashboardApp') }} # Create a UI app (2 files)
+{{ $assist->laragramCommand('make:mcp-tool ToolName') }}            # Create a tool
+{{ $assist->laragramCommand('make:mcp-resource ResourceName') }}     # Create a resource
+{{ $assist->laragramCommand('make:mcp-prompt PromptName') }}        # Create a prompt
+{{ $assist->laragramCommand('make:mcp-server ServerName') }}        # Create a server
+{{ $assist->laragramCommand('make:mcp-app-resource DashboardApp') }} # Create a UI app (2 files)
 ```
 
 After creating primitives, register them in your server's `$tools`, `$resources`, or `$prompts` properties.
 
 ### Tools
 
-@boostsnippet("MCP Tool Example", "php")
-use Illuminate\Json\Schema\JsonSchema;
-use Laravel\Mcp\Request;
-use Laravel\Mcp\Response;
-use Laravel\Mcp\Server\Tool;
+@brainsnippet("MCP Tool Example", "php")
+use LaraGram\Json\Schema\JsonSchema;
+use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Response;
+use LaraGram\Mcp\Server\Tool;
 
 class MyTool extends Tool
 {
@@ -64,12 +64,12 @@ class MyTool extends Tool
         return Response::text('Hello, '.$request->get('name'));
     }
 }
-@endboostsnippet
+@endbrainsnippet
 
 ### Registering Primitives in a Server
 
-@boostsnippet("Register Primitives in MCP Server", "php")
-use Laravel\Mcp\Server;
+@brainsnippet("Register Primitives in MCP Server", "php")
+use LaraGram\Mcp\Server;
 
 class AppServer extends Server
 {
@@ -85,7 +85,7 @@ class AppServer extends Server
         \App\Mcp\Prompts\MyPrompt::class,
     ];
 }
-@endboostsnippet
+@endbrainsnippet
 
 ## MCP UI Apps
 

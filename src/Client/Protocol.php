@@ -41,6 +41,9 @@ class Protocol
 
     protected ?ResponseCache $cache = null;
 
+    /** @var array<string, mixed> */
+    protected array $clientCapabilities = [];
+
     public function __construct(
         protected Transport $transport,
         protected Implementation $clientInfo,
@@ -293,6 +296,14 @@ class Protocol
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $capabilities
+     */
+    public function useCapabilities(array $capabilities): void
+    {
+        $this->clientCapabilities = $capabilities;
+    }
+
     public function useCache(?ResponseCache $responseCache): void
     {
         $this->cache = $responseCache;
@@ -431,7 +442,7 @@ class Protocol
 
         $params['_meta'] = [
             MetaKey::PROTOCOL_VERSION->value => $protocolVersion->value,
-            MetaKey::CLIENT_CAPABILITIES->value => (object) [],
+            MetaKey::CLIENT_CAPABILITIES->value => $this->clientCapabilities === [] ? (object) [] : $this->clientCapabilities,
             MetaKey::CLIENT_INFO->value => $this->clientInfo->toArray(),
             ...Arr::wrap(Arr::get($params, '_meta')),
         ];

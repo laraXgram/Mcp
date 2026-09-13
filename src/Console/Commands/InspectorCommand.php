@@ -40,7 +40,7 @@ class InspectorCommand extends Command
 
         $servers = $registrar->servers();
         if ($servers === []) {
-            $this->components->error('No MCP servers found. Please run `php artisan make:mcp-server [name]`');
+            $this->components->error('No MCP servers found. Please run `php laragram make:mcp-server [name]`');
 
             return static::FAILURE;
         }
@@ -73,19 +73,19 @@ class InspectorCommand extends Command
         }
 
         if ($localServer !== null) {
-            $artisanPath = base_path('artisan');
+            $laragramPath = base_path('laragram');
 
             $serverConfig = [
                 'type' => 'stdio',
                 'command' => $this->phpBinary(),
-                'args' => [$artisanPath, 'mcp:start', $handle],
+                'args' => [$laragramPath, 'mcp:start', $handle],
             ];
 
             $guidance = [
                 'Transport Type' => 'STDIO',
                 'Command' => $this->phpBinary(),
                 'Arguments' => implode(' ', [
-                    str_replace('\\', '/', $artisanPath),
+                    str_replace('\\', '/', $laragramPath),
                     'mcp:start',
                     $handle,
                 ]),

@@ -38,7 +38,7 @@ class AddWwwAuthenticateHeader
             return $response;
         }
 
-        // Sanctum, can't share discover URL
+        // Citadel, can't share discover URL
         $response->header(
             'WWW-Authenticate',
             'Bearer realm="mcp", error="invalid_token"'

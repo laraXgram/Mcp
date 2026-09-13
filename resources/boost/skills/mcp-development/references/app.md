@@ -97,7 +97,7 @@ MCP Apps add interactive UI to the Model Context Protocol. The server returns se
 └──────────────────┬──────────────────────────┘
                    │ MCP Protocol (JSON-RPC)
 ┌──────────────────▼──────────────────────────┐
-│  Laravel MCP Server                         │
+│  LaraGram MCP Server                         │
 │  - AppResource → self-contained HTML         │
 │  - Tool #[RendersApp] → triggers UI display   │
 │  - resources/read → serves HTML + _meta.ui  │
@@ -161,9 +161,9 @@ class StaticApp extends AppResource
 The simplest way to configure UI metadata is via the `#[AppMeta]` attribute directly on your resource class:
 
 ```php
-use Laravel\Mcp\Server\Attributes\AppMeta;
-use Laravel\Mcp\Server\Ui\Enums\Library;
-use Laravel\Mcp\Server\Ui\Enums\Permission;
+use LaraGram\Mcp\Server\Attributes\AppMeta;
+use LaraGram\Mcp\Server\Ui\Enums\Library;
+use LaraGram\Mcp\Server\Ui\Enums\Permission;
 
 #[AppMeta(
     connectDomains: ['https://api.stripe.com'],
@@ -180,7 +180,7 @@ class PaymentsResource extends AppResource
 For dynamic or computed configuration, override `appMeta()` instead:
 
 ```php
-use Laravel\Mcp\Server\Ui\AppMeta;
+use LaraGram\Mcp\Server\Ui\AppMeta;
 
 public function appMeta(): AppMeta
 {
@@ -197,7 +197,7 @@ public function appMeta(): AppMeta
 Use the `Permission` enum for type-safe permission configuration:
 
 ```php
-use Laravel\Mcp\Server\Ui\Enums\Permission;
+use LaraGram\Mcp\Server\Ui\Enums\Permission;
 
 Permission::Camera        // 'camera'
 Permission::Microphone    // 'microphone'
@@ -261,7 +261,7 @@ class PaymentsResource extends AppResource
 The `libraries` parameter adds pre-configured CDN scripts to the `<head>` of your app. Available libraries:
 
 ```php
-use Laravel\Mcp\Server\Ui\Enums\Library;
+use LaraGram\Mcp\Server\Ui\Enums\Library;
 
 Library::Tailwind  // Tailwind CSS CDN + dark mode config
 Library::Alpine    // Alpine.js CDN + x-cloak style
@@ -331,7 +331,7 @@ Renders a complete self-contained HTML document with the MCP SDK inlined. `creat
 
 The SDK is loaded from the `mcp.sdk` singleton (registered by `McpServiceProvider`) and inlined directly in a `<script>` tag. Library scripts (Tailwind, Alpine) configured via `#[AppMeta]` are injected after the SDK and before the `head` slot.
 
-Publish the component: `php artisan vendor:publish --tag=mcp-views`.
+Publish the component: `php laragram vendor:publish --tag=mcp-views`.
 
 To pass server-side data to JS, embed it as `data-*` attributes:
 
@@ -600,8 +600,8 @@ body {
 Associates a Tool with a UI Resource. When the tool is called, the host fetches and renders the linked resource.
 
 ```php
-use Laravel\Mcp\Server\Attributes\RendersApp;
-use Laravel\Mcp\Server\Ui\Enums\Visibility;
+use LaraGram\Mcp\Server\Attributes\RendersApp;
+use LaraGram\Mcp\Server\Ui\Enums\Visibility;
 
 // Both model and app can call this tool (default)
 #[RendersApp(resource: DashboardApp::class)]
@@ -614,7 +614,7 @@ class RefreshDashboardData extends Tool { ... }
 
 **Visibility:**
 
-The `Visibility` enum (`Laravel\Mcp\Server\Ui\Enums\Visibility`) has two cases: `Model` and `App`. The default is `[Visibility::Model, Visibility::App]`.
+The `Visibility` enum (`LaraGram\Mcp\Server\Ui\Enums\Visibility`) has two cases: `Model` and `App`. The default is `[Visibility::Model, Visibility::App]`.
 
 | Visibility                             | Model | App | Use case                                               |
 | -------------------------------------- | ----- | --- | ------------------------------------------------------ |

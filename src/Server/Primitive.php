@@ -11,6 +11,7 @@ use LaraGram\Mcp\Schema\Icon;
 use LaraGram\Mcp\Server\Attributes\Description;
 use LaraGram\Mcp\Server\Attributes\Name;
 use LaraGram\Mcp\Server\Attributes\Title;
+use LaraGram\Mcp\Server\Concerns\HasAbilities;
 use LaraGram\Mcp\Server\Concerns\HasIcons;
 use LaraGram\Mcp\Server\Concerns\HasMeta;
 
@@ -19,6 +20,7 @@ use LaraGram\Mcp\Server\Concerns\HasMeta;
  */
 abstract class Primitive implements Arrayable
 {
+    use HasAbilities;
     use HasIcons;
     use HasMeta;
 
@@ -90,6 +92,10 @@ abstract class Primitive implements Arrayable
 
     public function eligibleForRegistration(): bool
     {
+        if (! $this->hasRequiredAbilities()) {
+            return false;
+        }
+
         if (method_exists($this, 'shouldRegister')) {
             return Container::getInstance()->call([$this, 'shouldRegister']);
         }

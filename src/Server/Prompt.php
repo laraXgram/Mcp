@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace LaraGram\Mcp\Server;
 
 use LaraGram\Mcp\Server\Prompts\Argument;
-use LaraGram\Mcp\Server\Prompts\Arguments;
 
 abstract class Prompt extends Primitive
 {

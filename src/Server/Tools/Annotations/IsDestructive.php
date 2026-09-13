@@ -6,7 +6,7 @@ namespace LaraGram\Mcp\Server\Tools\Annotations;
 
 use Attribute;
 
-#[Attribute(Attribute::TARGET_CLASS)]
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 class IsDestructive extends ToolAnnotation
 {
     public function __construct(public bool $value = true)

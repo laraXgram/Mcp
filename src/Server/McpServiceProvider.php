@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaraGram\Mcp\Server;
 
+use LaraGram\Container\Container;
 use LaraGram\Contracts\Http\Kernel as HttpKernelContract;
 use LaraGram\Foundation\Http\Kernel as HttpKernel;
 use LaraGram\Support\Facades\Route;
@@ -18,6 +19,7 @@ use LaraGram\Mcp\Console\Commands\MakeToolCommand;
 use LaraGram\Mcp\Console\Commands\StartCommand;
 use LaraGram\Mcp\Request;
 use LaraGram\Mcp\Server\Middleware\AddWwwAuthenticateHeader;
+use LaraGram\Mcp\Server\Subscriptions\Hub;
 
 class McpServiceProvider extends ServiceProvider
 {
@@ -26,6 +28,10 @@ class McpServiceProvider extends ServiceProvider
         $this->app->singleton(Registrar::class, fn (): Registrar => new Registrar);
 
         $this->app->singleton(ClientManager::class, fn (): ClientManager => new ClientManager);
+
+        $this->app->singleton(Hub::class, fn ($app): Hub => new Hub(
+            $app->make('cache')->store($app->make('config')->get('mcp.subscriptions.store')),
+        ));
 
         $this->app->singleton('mcp.sdk', fn (): string => (string) file_get_contents(__DIR__.'/../../resources/js/mcp-sdk.min.js'));
 
@@ -105,6 +111,7 @@ class McpServiceProvider extends ServiceProvider
 
                 $request->setArguments($currentRequest->all());
                 $request->setMeta($currentRequest->meta());
+                $request->setInput($currentRequest->inputResponses(), $currentRequest->rawRequestState(), $currentRequest->fingerprint());
             }
         });
     }
@@ -112,8 +119,11 @@ class McpServiceProvider extends ServiceProvider
     protected function registerClientDisconnect(): void
     {
         $this->app->terminating(function (): void {
-            if ($this->app->resolved(ClientManager::class)) {
-                $this->app->make(ClientManager::class)->disconnectAll();
+            // Under long-running servers the current container may be a per-request sandbox.
+            $app = Container::getInstance();
+
+            if ($app->resolved(ClientManager::class)) {
+                $app->make(ClientManager::class)->disconnectAll();
             }
         });
     }

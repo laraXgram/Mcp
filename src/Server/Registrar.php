@@ -20,6 +20,7 @@ use LaraGram\Mcp\Server\Http\Controllers\OAuthRegisterController;
 use LaraGram\Mcp\Server\Middleware\AddWwwAuthenticateHeader;
 use LaraGram\Mcp\Server\Middleware\ReorderJsonAccept;
 use LaraGram\Mcp\Server\Middleware\ValidateMcpHeaders;
+use LaraGram\Mcp\Server\Subscriptions\Hub;
 use LaraGram\Mcp\Server\Transport\HttpTransport;
 use LaraGram\Mcp\Server\Transport\StdioTransport;
 
@@ -66,7 +67,7 @@ class Registrar
      */
     public function local(string $handle, string $serverClass): void
     {
-        $this->localServers[$handle] = fn (): mixed => static::startServer($serverClass, fn (): StdioTransport => new StdioTransport);
+        $this->localServers[$handle] = fn (?Closure $transport = null): mixed => static::startServer($serverClass, $transport ?? fn (): StdioTransport => new StdioTransport);
     }
 
     /**
@@ -97,6 +98,38 @@ class Registrar
         array $clientMetadata = [],
     ): void {
         (new OAuthRouteRegistrar)->register($client, $handler, $middleware, $connectUri, $callbackUri, $clientMetadataUri, $clientMetadata);
+    }
+
+    /**
+     * Notify "subscriptions/listen" streams that the list of tools changed.
+     */
+    public function toolsListChanged(): void
+    {
+        $this->hub()->publish(Hub::TOOLS_LIST_CHANGED);
+    }
+
+    /**
+     * Notify "subscriptions/listen" streams that the list of prompts changed.
+     */
+    public function promptsListChanged(): void
+    {
+        $this->hub()->publish(Hub::PROMPTS_LIST_CHANGED);
+    }
+
+    /**
+     * Notify "subscriptions/listen" streams that the list of resources changed.
+     */
+    public function resourcesListChanged(): void
+    {
+        $this->hub()->publish(Hub::RESOURCES_LIST_CHANGED);
+    }
+
+    /**
+     * Notify streams subscribed to the given resource URI that it was updated.
+     */
+    public function resourceUpdated(string $uri): void
+    {
+        $this->hub()->publish(Hub::RESOURCE_UPDATED, ['uri' => $uri]);
     }
 
     public function getLocalServer(string $handle): ?callable
@@ -196,7 +229,25 @@ class Registrar
      */
     public static function ensureMcpScope(): array
     {
-        return [];
+        if (class_exists('LaraGram\Passport\Passport') === false) {
+            return [];
+        }
+
+        /** @var array<string, string> $current */
+        $current = \LaraGram\Passport\Passport::scopes()->pluck('description', 'id')->toArray();
+
+        if (! array_key_exists(self::OAUTH_SCOPE, $current)) {
+            $current[self::OAUTH_SCOPE] = 'Use MCP server';
+
+            \LaraGram\Passport\Passport::tokensCan($current);
+        }
+
+        return $current;
+    }
+
+    protected function hub(): Hub
+    {
+        return Container::getInstance()->make(Hub::class);
     }
 
     protected function clientManager(): ClientManager

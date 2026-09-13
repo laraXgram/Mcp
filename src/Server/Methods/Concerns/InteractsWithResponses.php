@@ -31,6 +31,10 @@ trait InteractsWithResponses
     {
         $responseFactory = $this->toResponseFactory($response);
 
+        if (($inputRequired = $responseFactory->getInputRequired()) !== null) {
+            return JsonRpcResponse::result($request->id, $inputRequired->toArray());
+        }
+
         $responseFactory->responses()->each(function (Response $response) use ($request): void {
             if (! $this instanceof Errable && $response->isError()) {
                 throw new JsonRpcException(
@@ -122,7 +126,7 @@ trait InteractsWithResponses
 
     protected function toErrorMessage(Throwable $e): string
     {
-        if (config('app.debug', false)) {
+        if (config('mcp.expose_errors') ?? config('app.debug', false)) {
             return $e->getMessage();
         }
 

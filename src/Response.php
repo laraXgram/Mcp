@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace LaraGram\Mcp;
 
+use Closure;
 use LaraGram\Container\Container;
+use LaraGram\Contracts\JsonSchema\JsonSchema;
+use LaraGram\JsonSchema\JsonSchema as JsonSchemaFactory;
+use LaraGram\JsonSchema\Types\Type;
 use LaraGram\Filesystem\FilesystemAdapter;
 use LaraGram\Support\Facades\Storage;
 use LaraGram\Support\Traits\Conditionable;
@@ -19,6 +23,8 @@ use LaraGram\Mcp\Server\Content\Image;
 use LaraGram\Mcp\Server\Content\Notification;
 use LaraGram\Mcp\Server\Content\ResourceLink;
 use LaraGram\Mcp\Server\Content\Text;
+use LaraGram\Mcp\Server\Input\InputRequired;
+use LaraGram\Mcp\Support\RequestState;
 use LaraGram\Mcp\Server\Contracts\Content;
 use LaraGram\Mcp\Server\Resource;
 use LaraGram\Filesystem\Exception\UnableToReadFile;
@@ -107,6 +113,68 @@ class Response
     public static function error(string $text): static
     {
         return new static(new Text($text), isError: true);
+    }
+
+    /**
+     * Ask the client for more input before the request can complete (Multi Round-Trip Requests).
+     *
+     * The client fulfills the input requests and retries the request; read the answers with
+     * $request->inputResponse($key) and the stored data with $request->state().
+     *
+     * @param  array<string, array{method: string, params: array<string, mixed>}>  $inputRequests
+     * @param  array<string, mixed>  $state
+     */
+    public static function inputRequired(array $inputRequests = [], array $state = [], int $ttl = 600): ResponseFactory
+    {
+        $request = Container::getInstance()->make(Request::class);
+
+        $sealed = RequestState::seal(
+            ['inputs' => array_keys($inputRequests), 'state' => $state],
+            $request->fingerprint(),
+            $request->subject(),
+            $ttl,
+        );
+
+        return (new ResponseFactory([]))->withInputRequired(new InputRequired($inputRequests, $sealed));
+    }
+
+    /**
+     * Ask the user to fill in a form through the client (elicitation), then read it with $request->elicited($key).
+     *
+     * @param  (Closure(JsonSchema): array<string, Type>)|array<string, Type>  $schema
+     * @param  array<string, mixed>  $state
+     */
+    public static function elicit(string $key, string $message, Closure|array $schema, array $state = []): ResponseFactory
+    {
+        $request = Container::getInstance()->make(Request::class);
+
+        if (! $request->clientSupports('elicitation')) {
+            return new ResponseFactory(static::error('This action needs confirmation from the user, but the client does not support elicitation.'));
+        }
+
+        $requestedSchema = JsonSchemaFactory::object($schema)->toArray();
+        $requestedSchema['properties'] ??= (object) [];
+
+        return static::inputRequired([
+            $key => [
+                'method' => 'elicitation/create',
+                'params' => [
+                    'mode' => 'form',
+                    'message' => $message,
+                    'requestedSchema' => $requestedSchema,
+                ],
+            ],
+        ], $state);
+    }
+
+    /**
+     * Ask the user to confirm an action, then check it with $request->confirmed($key).
+     */
+    public static function confirm(string $message, string $key = 'confirm'): ResponseFactory
+    {
+        return static::elicit($key, $message, fn (JsonSchema $schema): array => [
+            'confirm' => $schema->boolean()->description('Allow this action.')->required(),
+        ]);
     }
 
     public function content(): Content

@@ -10,6 +10,7 @@ use LaraGram\Support\Traits\Conditionable;
 use LaraGram\Support\Traits\Macroable;
 use InvalidArgumentException;
 use LaraGram\Mcp\Server\Concerns\HasMeta;
+use LaraGram\Mcp\Server\Input\InputRequired;
 use LaraGram\Mcp\Server\Concerns\HasStructuredContent;
 
 class ResponseFactory
@@ -23,6 +24,8 @@ class ResponseFactory
      * @var Collection<int, Response>
      */
     protected Collection $responses;
+
+    protected ?InputRequired $inputRequired = null;
 
     /**
      * @param  Response|array<int, Response>  $responses
@@ -60,6 +63,18 @@ class ResponseFactory
         $this->setStructuredContent($structuredContent);
 
         return $this;
+    }
+
+    public function withInputRequired(InputRequired $inputRequired): static
+    {
+        $this->inputRequired = $inputRequired;
+
+        return $this;
+    }
+
+    public function getInputRequired(): ?InputRequired
+    {
+        return $this->inputRequired;
     }
 
     /**

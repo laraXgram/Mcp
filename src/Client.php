@@ -55,7 +55,7 @@ class Client
     protected function defaultClientInfo(): Implementation
     {
         return new Implementation(
-            name: config('app.name', 'Laravel MCP Client'),
+            name: config('app.name', 'LaraGram MCP Client'),
             version: '0.0.1',
         );
     }
@@ -83,6 +83,18 @@ class Client
     public function withCache(?string $store = null, ?string $for = null): static
     {
         $this->protocol->useCache(new ResponseCache($store, $for));
+
+        return $this;
+    }
+
+    /**
+     * Declare client capabilities sent with every request, e.g. ['elicitation' => new stdClass].
+     *
+     * @param  array<string, mixed>  $capabilities
+     */
+    public function withCapabilities(array $capabilities): static
+    {
+        $this->protocol->useCapabilities($capabilities);
 
         return $this;
     }
@@ -198,14 +210,15 @@ class Client
 
     /**
      * @param  array<string, mixed>  $arguments
+     * @param  array<string, mixed>  $inputResponses  Responses to the input requests of a previous "input_required" result.
      */
-    public function callTool(Tool|string $tool, array $arguments = []): ToolResult
+    public function callTool(Tool|string $tool, array $arguments = [], array $inputResponses = [], ?string $requestState = null): ToolResult
     {
         $name = $tool instanceof Tool ? $tool->name : $tool;
         $mirroredParameters = $tool instanceof Tool ? $tool->mirroredParameters() : null;
 
         try {
-            return (new CallTool($name, $arguments, $mirroredParameters))->handle($this->protocol);
+            return (new CallTool($name, $arguments, $mirroredParameters, $inputResponses, $requestState))->handle($this->protocol);
         } catch (JsonRpcException $jsonRpcException) {
             if ($jsonRpcException->getCode() !== ErrorCode::HEADER_MISMATCH->value) {
                 throw $jsonRpcException;
@@ -218,7 +231,7 @@ class Client
                 throw $jsonRpcException;
             }
 
-            return (new CallTool($name, $arguments, $refreshed))->handle($this->protocol);
+            return (new CallTool($name, $arguments, $refreshed, $inputResponses, $requestState))->handle($this->protocol);
         }
     }
 

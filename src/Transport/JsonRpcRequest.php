@@ -8,6 +8,7 @@ use LaraGram\Mcp\Enums\MetaKey;
 use LaraGram\Mcp\Enums\RequestHeader;
 use LaraGram\Mcp\Exceptions\JsonRpcException;
 use LaraGram\Mcp\Request;
+use LaraGram\Mcp\Support\RequestState;
 
 class JsonRpcRequest
 {
@@ -138,7 +139,15 @@ class JsonRpcRequest
             $arguments = [];
         }
 
-        return new Request($arguments, $this->meta());
+        $request = new Request($arguments, $this->meta());
+
+        $request->setInput(
+            is_array($this->params['inputResponses'] ?? null) ? $this->params['inputResponses'] : [],
+            is_string($this->params['requestState'] ?? null) ? $this->params['requestState'] : null,
+            RequestState::fingerprint($this->method, $this->name(), $arguments),
+        );
+
+        return $request;
     }
 
     /**

@@ -15,6 +15,7 @@ use LaraGram\Mcp\Exceptions\JsonRpcException;
 use LaraGram\Mcp\Schema\Icon;
 use LaraGram\Mcp\Schema\Implementation;
 use LaraGram\Mcp\Server\AppResource;
+use LaraGram\Mcp\Server\Cancellation;
 use LaraGram\Mcp\Server\Attributes\Cacheable;
 use LaraGram\Mcp\Server\Attributes\Instructions;
 use LaraGram\Mcp\Server\Attributes\Name;
@@ -73,12 +74,12 @@ abstract class Server
         'resources/read',
     ];
 
-    protected string $name = 'Laravel MCP Server';
+    protected string $name = 'LaraGram MCP Server';
 
     protected string $version = '0.0.1';
 
     protected string $instructions = <<<'MARKDOWN'
-        This MCP server lets AI agents interact with our Laravel application.
+        This MCP server lets AI agents interact with our LaraGram application.
     MARKDOWN;
 
     /**
@@ -215,6 +216,8 @@ abstract class Server
                 : JsonRpcNotification::from($jsonRequest);
 
             if ($request instanceof JsonRpcNotification) {
+                $this->handleNotification($request);
+
                 return;
             }
 
@@ -240,7 +243,7 @@ abstract class Server
 
             $config = Container::getInstance()->make('config');
 
-            if ($config->get('app.debug', false)) {
+            if ($config->get('mcp.expose_errors') ?? $config->get('app.debug', false)) {
                 throw $e;
             }
 
@@ -413,14 +416,25 @@ abstract class Server
         );
 
         $container->instance('mcp.request', $request->toRequest());
+        $container->instance('mcp.transport', $this->transport);
 
         try {
             $response = $methodClass->handle($request, $context);
         } finally {
             $container->forgetInstance('mcp.request');
+            $container->forgetInstance('mcp.transport');
         }
 
         return $response;
+    }
+
+    protected function handleNotification(JsonRpcNotification $notification): void
+    {
+        $requestId = $notification->params['requestId'] ?? null;
+
+        if ($notification->method === 'notifications/cancelled' && (is_int($requestId) || is_string($requestId))) {
+            Cancellation::cancel($requestId);
+        }
     }
 
     /**

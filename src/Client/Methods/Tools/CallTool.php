@@ -22,6 +22,8 @@ class CallTool implements Method, MirrorsParameters
         protected string $name,
         protected array $arguments = [],
         protected ?MirroredParameters $mirroredParameters = null,
+        protected array $inputResponses = [],
+        protected ?string $requestState = null,
     ) {
         //
     }
@@ -44,10 +46,12 @@ class CallTool implements Method, MirrorsParameters
      */
     public function params(): array
     {
-        return [
+        return array_filter([
             'name' => $this->name,
             'arguments' => (object) $this->arguments,
-        ];
+            'inputResponses' => $this->inputResponses === [] ? null : $this->inputResponses,
+            'requestState' => $this->requestState,
+        ], fn (mixed $value): bool => $value !== null);
     }
 
     public function handle(Protocol $protocol): ToolResult

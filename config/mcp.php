@@ -4,6 +4,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Expose Errors
+    |--------------------------------------------------------------------------
+    |
+    | Whether exception messages are sent to MCP clients (and unexpected
+    | exceptions rethrown). Defaults to "app.debug" when null. Keep it off
+    | when the application runs in debug mode but serves real clients.
+    |
+    */
+
+    'expose_errors' => env('MCP_EXPOSE_ERRORS'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Redirect Domains
     |--------------------------------------------------------------------------
     |
@@ -65,6 +78,27 @@ return [
     'tool_search' => [
         'max_tool_calls' => 10,
         'max_output_bytes' => 65_536,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Subscriptions
+    |--------------------------------------------------------------------------
+    |
+    | Change notifications published with Mcp::toolsListChanged(), etc. are
+    | kept in this cache store so every process can deliver them. Streams
+    | poll it at the given interval and close gracefully after the timeout
+    | (clients then listen again). Idle HTTP streams send a keep-alive
+    | comment so disconnected clients free the worker. Use a shared store
+    | such as redis.
+    |
+    */
+
+    'subscriptions' => [
+        'store' => env('MCP_SUBSCRIPTIONS_STORE'),
+        'poll_interval' => 1.0,
+        'keep_alive' => 15,
+        'timeout' => 300,
     ],
 
 ];

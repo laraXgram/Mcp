@@ -104,6 +104,24 @@ class HttpTransport implements Transport
         $this->stream = $stream;
     }
 
+    /**
+     * Send an SSE comment on an open stream, so a disconnected client is noticed.
+     */
+    public function keepAlive(): void
+    {
+        if (! $this->stream instanceof Closure) {
+            return;
+        }
+
+        echo ": keep-alive\n\n";
+
+        if (ob_get_level() !== 0) {
+            ob_flush();
+        }
+
+        flush();
+    }
+
     protected function sendStreamMessage(string $message): void
     {
         echo 'data: '.$message."\n\n";

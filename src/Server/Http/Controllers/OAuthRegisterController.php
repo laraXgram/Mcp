@@ -67,7 +67,7 @@ class OAuthRegisterController
 
         $validated = $validator->validated();
 
-        if (class_exists('Laravel\Passport\ClientRepository') === false) {
+        if (class_exists('LaraGram\Passport\ClientRepository') === false) {
             return response()->json([
                 'error' => 'server_error',
                 'error_description' => 'OAuth support (Passport) is not installed.',
@@ -75,7 +75,7 @@ class OAuthRegisterController
         }
 
         $clients = Container::getInstance()->make(
-            'Laravel\Passport\ClientRepository'
+            'LaraGram\Passport\ClientRepository'
         );
 
         try {
