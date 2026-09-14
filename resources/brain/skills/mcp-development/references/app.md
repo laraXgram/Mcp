@@ -593,6 +593,57 @@ body {
 
 ---
 
+## Luna Apps (React, Vue, Svelte)
+
+When the application uses Luna, an MCP App can be a Luna page instead of a Blade view. Extend `LaraGram\Mcp\Luna\LunaAppResource` and return the page component and its props:
+
+```php
+use LaraGram\Mcp\Luna\LunaAppResource;
+use LaraGram\Mcp\Request;
+
+class OrdersApp extends LunaAppResource
+{
+    protected function component(): string
+    {
+        return 'Mcp/Orders';
+    }
+
+    protected function props(Request $request): array
+    {
+        return ['orders' => Order::latest()->take(20)->get()];
+    }
+}
+```
+
+Hosts cannot load assets from the application, so the page's JavaScript and CSS are inlined from a single-file build. Build it with the `lunaMcpApp()` Vite plugin from `@laraxgram/vite` in a separate Vite config (the output goes to `bootstrap/mcp-app/app.js` and `app.css`, matching `LunaAppResource::$bundle`):
+
+```js
+// vite.mcp-app.config.js, built with: npx vite build --config vite.mcp-app.config.js
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import luna, { lunaMcpApp } from '@laraxgram/vite'
+
+export default defineConfig({
+    plugins: [vue(), luna({ ssr: false }), lunaMcpApp({ entry: 'resources/js/mcp-app.ts' })],
+})
+```
+
+The entry creates the Luna app as usual and then connects it to the host. `connectMcpApp()` from `@laraxgram/luna` mirrors the tool input, the latest tool result and the host context into the `toolInput`, `toolResult` and `hostContext` page props (configurable, or `false` to disable), and resolves with `null` outside an MCP host:
+
+```ts
+import { connectMcpApp, callMcpTool, mcpApp, isMcpApp } from '@laraxgram/luna'
+
+await connectMcpApp()
+
+const result = await callMcpTool('refresh-orders', { status: 'open' })
+```
+
+A tool can navigate an open Luna app to another page: return `LunaPage::response('Mcp/OrderDetails', ['order' => $order])` (from `LaraGram\Mcp\Luna\LunaPage`). Luna apps visit the page in `structuredContent.luna` client-side (`followPages`), while other clients still receive the props as structured content.
+
+Rebuild the MCP App bundle after changing its pages; the regular `npm run build` does not produce it.
+
+---
+
 ## Tool-to-UI Linking
 
 ### #[RendersApp] Attribute
@@ -642,37 +693,6 @@ class GetDashboardMetrics extends Tool
         return Response::json(Metric::latest()->take(50)->get());
     }
 }
-```
-
----
-
-## Testing
-
-```php
-it('returns html content', function () {
-    MyServer::readResource(DashboardApp::class)
-        ->assertSee('<div id="app">');
-});
-
-it('has correct mime type and uri scheme', function () {
-    $resource = new DashboardApp;
-    $data = $resource->toArray();
-
-    expect($data['mimeType'])->toBe('text/html;profile=mcp-app')
-        ->and($data['_meta']['ui'])->toBeArray()
-        ->and($resource->uri())->toStartWith('ui://');
-});
-
-it('configures ui meta correctly', function () {
-    $meta = (new DashboardApp)->resolvedAppMeta();
-
-    expect($meta['csp']['connectDomains'])->toContain('https://api.example.com')
-        ->and($meta['permissions'])->toHaveKey('clipboardWrite');
-});
-
-it('includes ui metadata in tool listing', function () {
-    MyServer::listTools()->assertSee('show-dashboard');
-});
 ```
 
 ---
