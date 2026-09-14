@@ -12,10 +12,8 @@
         "source": "https://github.com/laraxgram/mcp"
     },
     "require": {
-        "php": "^8.2",
-        "ext-json": "*",
-        "ext-mbstring": "*",
-        "laraxgram/core": "*"
+        "php": "^8.3",
+        "laraxgram/core": "^4"
     },
     "autoload": {
         "psr-4": {
