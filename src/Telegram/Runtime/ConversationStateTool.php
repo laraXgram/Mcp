@@ -30,7 +30,8 @@ class ConversationStateTool extends Tool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'user_id' => $schema->integer()->description('The Telegram user id.')->required(),
+            'user_id' => $schema->integer()->description('The Telegram user id, or the sender chat id for messages sent on behalf of a chat.')->required(),
+            'connection' => $schema->string()->description('The bot connection the conversation belongs to. Needed when [bot.default] is "auto", where conversations are stored per bot.'),
             'action' => $schema->string()->enum(['get', 'forget'])->description('Read the state (default) or forget it.'),
         ];
     }
@@ -53,6 +54,7 @@ class ConversationStateTool extends Tool
         $request->validate([
             'user_id' => ['required', 'integer'],
             'action' => ['nullable', 'in:get,forget'],
+            'connection' => ['nullable', 'string'],
         ]);
 
         $container = Container::getInstance();
@@ -62,11 +64,27 @@ class ConversationStateTool extends Tool
         $prefix = $config->get('conversation.prefix', 'conversation');
         $userId = (int) $request->get('user_id');
 
-        $stateKey = "{$prefix}:{$userId}";
-        $answersKey = "{$prefix}:answers:{$userId}";
+        $connection = null;
+        $owner = (string) $userId;
+
+        // With the 'auto' connection, conversations are stored per bot.
+        if ($config->get('bot.default') === 'auto') {
+            $connections = array_keys((array) $config->get('bot.connections', []));
+            $connection = $request->get('connection') ?? (count($connections) === 1 ? $connections[0] : null);
+
+            if (! is_string($connection) || ! in_array($connection, $connections, true)) {
+                return Response::error('Pass the bot [connection] the conversation belongs to: '.implode(', ', $connections).'.');
+            }
+
+            $owner = "{$connection}:{$userId}";
+        }
+
+        $stateKey = "{$prefix}:{$owner}";
+        $answersKey = "{$prefix}:answers:{$owner}";
 
         $state = [
             'user_id' => $userId,
+            'connection' => $connection,
             'active' => $store->get($stateKey),
             'retained_answers' => $store->get($answersKey),
         ];

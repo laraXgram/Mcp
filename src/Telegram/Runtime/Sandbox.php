@@ -6,18 +6,17 @@ namespace LaraGram\Mcp\Telegram\Runtime;
 
 use Closure;
 use LaraGram\Container\Container;
-use LaraGram\Laraquest\ConnectionRegistry;
 use LaraGram\Request\Request as BotRequest;
 use LaraGram\Support\Facades\Facade;
 use LaraGram\Support\Str;
-use ReflectionProperty;
 use RuntimeException;
 
 /**
  * Runs code against a synthetic Telegram update while every Bot API call is
- * captured instead of sent. The container's bot request and redirector, the
- * default auth guard and the default bot connection are restored afterwards, so
- * the sandbox can run inside an HTTP (MCP) request without leaking bot state into it.
+ * captured instead of sent. The bot connection is bound to the synthetic request
+ * only, and the container's bot request and redirector and the default auth guard
+ * are restored afterwards, so the sandbox can run inside an HTTP (MCP) request
+ * without leaking bot state into it.
  */
 class Sandbox
 {
@@ -53,14 +52,13 @@ class Sandbox
         $previousRedirect = $app->resolved('redirect') ? $app->make('redirect') : null;
         $auth = $app->bound('auth') ? $app->make('auth') : null;
         $previousGuard = $auth?->getDefaultDriver();
-        $previousConnection = ConnectionRegistry::getDefaultConnection();
 
         $this->calls = [];
 
         BotRequest::interceptUsing(fn (string $method, array $parameters, ?string $resolved): mixed => $this->capture($method, $parameters, $resolved));
 
         if ($connection !== null) {
-            ConnectionRegistry::setDefaultConnection($connection);
+            $request->useConnection($connection);
         }
 
         $app->instance('request', $request);
@@ -70,13 +68,6 @@ class Sandbox
             return $callback($request);
         } finally {
             BotRequest::interceptUsing(null);
-
-            if ($connection !== null) {
-                // ConnectionRegistry has no public way to clear the default connection.
-                $previousConnection === null
-                    ? (new ReflectionProperty(ConnectionRegistry::class, 'defaultConnection'))->setValue(null, null)
-                    : ConnectionRegistry::setDefaultConnection($previousConnection);
-            }
 
             $previousRequest !== null
                 ? $app->instance('request', $previousRequest)

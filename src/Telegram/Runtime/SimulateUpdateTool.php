@@ -39,7 +39,7 @@ class SimulateUpdateTool extends Tool
             'update' => $schema->object()
                 ->description('A Telegram Update object, e.g. {"update_id": 1, "message": {"message_id": 1, "date": 0, "chat": {"id": 1, "type": "private"}, "from": {"id": 1, "is_bot": false, "first_name": "Test"}, "text": "/start"}}.')
                 ->required(),
-            'connection' => $schema->string()->description('The bot connection the update is delivered to.'),
+            'connection' => $schema->string()->description('The bot connection the update is delivered to. Required when [bot.default] is "auto" and several connections are configured, unless their secret tokens tell them apart.'),
             'results' => $schema->object()->description('Fake Bot API results keyed by method name, returned to the handlers instead of the defaults.'),
         ];
     }
