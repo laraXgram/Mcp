@@ -81,7 +81,7 @@
                 <!-- User Info -->
                 <div class="rounded-lg border p-4 bg-muted/50">
                     <p class="text-sm text-muted-foreground mb-2">Logged in as:</p>
-                    <p class="font-medium">{{ $user->email }}</p>
+                    <p class="font-medium">{{ $user->email ?? trim(($user->first_name ?? '').' '.($user->last_name ?? '')) }}</p>
                 </div>
 
                 <!-- Scopes / Permissions -->
@@ -108,7 +108,7 @@
             <!-- Footer With Buttons -->
             <div class="flex items-center p-6 pt-0 gap-3">
                 <!-- Deny Form -->
-                <form method="POST" action="{{ route('passport.authorizations.deny') }}" class="flex-1">
+                <form method="POST" action="{{ route('citadel.authorizations.deny') }}" class="flex-1">
                     @csrf
                     @method('DELETE')
                     <input type="hidden" name="state" value="">
@@ -123,7 +123,7 @@
                 </form>
 
                 <!-- Approve Form -->
-                <form method="POST" action="{{ route('passport.authorizations.approve') }}" class="flex-1" id="authorizeForm">
+                <form method="POST" action="{{ route('citadel.authorizations.approve') }}" class="flex-1" id="authorizeForm">
                     @csrf
                     <input type="hidden" name="state" value="">
                     <input type="hidden" name="client_id" value="{{ $client->id }}">

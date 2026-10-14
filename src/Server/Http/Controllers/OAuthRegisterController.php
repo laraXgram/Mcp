@@ -67,15 +67,15 @@ class OAuthRegisterController
 
         $validated = $validator->validated();
 
-        if (class_exists('LaraGram\Passport\ClientRepository') === false) {
+        if (class_exists('LaraGram\Citadel\ClientRepository') === false) {
             return response()->json([
                 'error' => 'server_error',
-                'error_description' => 'OAuth support (Passport) is not installed.',
+                'error_description' => 'OAuth support (Citadel) is not installed.',
             ], 500);
         }
 
         $clients = Container::getInstance()->make(
-            'LaraGram\Passport\ClientRepository'
+            'LaraGram\Citadel\ClientRepository'
         );
 
         try {

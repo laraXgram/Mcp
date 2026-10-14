@@ -191,8 +191,8 @@ class Registrar
     {
         return [
             'issuer' => config('mcp.authorization_server') ?? url('/'),
-            'authorization_endpoint' => route('passport.authorizations.authorize'),
-            'token_endpoint' => route('passport.token'),
+            'authorization_endpoint' => route('citadel.authorizations.authorize'),
+            'token_endpoint' => route('citadel.token'),
             'registration_endpoint' => url($oauthPrefix.'/register'),
             'response_types_supported' => ['code'],
             'code_challenge_methods_supported' => ['S256'],
@@ -229,17 +229,17 @@ class Registrar
      */
     public static function ensureMcpScope(): array
     {
-        if (class_exists('LaraGram\Passport\Passport') === false) {
+        if (class_exists('LaraGram\Citadel\Citadel') === false) {
             return [];
         }
 
         /** @var array<string, string> $current */
-        $current = \LaraGram\Passport\Passport::scopes()->pluck('description', 'id')->toArray();
+        $current = \LaraGram\Citadel\Citadel::scopes()->pluck('description', 'id')->toArray();
 
         if (! array_key_exists(self::OAUTH_SCOPE, $current)) {
             $current[self::OAUTH_SCOPE] = 'Use MCP server';
 
-            \LaraGram\Passport\Passport::tokensCan($current);
+            \LaraGram\Citadel\Citadel::tokensCan($current);
         }
 
         return $current;
