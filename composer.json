@@ -13,7 +13,12 @@
     },
     "require": {
         "php": "^8.3",
-        "laraxgram/core": "^4"
+        "laraxgram/core": "^4.5"
+    },
+    "suggest": {
+        "laraxgram/citadel": "Required to protect MCP servers with OAuth.",
+        "laraxgram/luna": "Required to serve Luna pages as MCP app resources.",
+        "laraxgram/mtproto": "Required to use the MTProto tools."
     },
     "autoload": {
         "psr-4": {
