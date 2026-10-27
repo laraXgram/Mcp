@@ -134,7 +134,8 @@ class Sandbox
      */
     protected function server(?string $connection): array
     {
-        $server = ['REQUEST_METHOD' => 'POST', 'REQUEST_TIME' => time()];
+        // A simulated update may repeat an id the bot already handled.
+        $server = ['REQUEST_METHOD' => 'POST', 'REQUEST_TIME' => time(), 'LARAGRAM_ALLOW_DUPLICATE' => true];
 
         $secret = $connection !== null ? config("bot.connections.{$connection}.secret_token") : null;
 
